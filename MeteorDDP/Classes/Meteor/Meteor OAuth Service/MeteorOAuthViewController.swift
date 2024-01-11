@@ -105,13 +105,14 @@ extension MeteorOAuthViewController: WKNavigationDelegate {
     
     /* Start the network activity indicator when the web view is loading */
     public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation) {
-        UIApplication.shared.isNetworkActivityIndicatorVisible = true
+        // FIXME 2024-01-11 Disabled OAuth on visionOS because UIViewController is not available
+        // UIApplication.shared.isNetworkActivityIndicatorVisible = true
     }
     
     /* Stop the network activity indicator when the loading finishes */
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation) {
-        
-        UIApplication.shared.isNetworkActivityIndicatorVisible = false        
+        // FIXME 2024-01-11 Disabled OAuth on visionOS because UIViewController is not available
+        // UIApplication.shared.isNetworkActivityIndicatorVisible = false
         webView.evaluateJavaScript("JSON.parse(document.getElementById('config').innerHTML)") { (html, error) in
             if let json = html as? MeteorKeyValue {
                 if let secret = json["credentialSecret"] as? String,

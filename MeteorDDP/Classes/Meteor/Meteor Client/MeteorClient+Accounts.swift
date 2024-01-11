@@ -119,18 +119,19 @@ public extension MeteorClient {
     ///   - service: MeteorLoginService
     ///   - clientId: String
     ///   - viewController: UIViewController
-    func login<T: UIViewController>(with service: MeteorLoginService, clientId: String, viewController: T) {
-        if !loginWithToken(nil) {
-            let oauthDialog = MeteorOAuthViewController()
-            oauthDialog.serviceName = service.rawValue.capitalized
-            let oauth = MeteorOAuth(socket.url.absoluteString)
-            oauthDialog.url = URL(string: oauth.getServiceUrl(service, clientId: clientId))
-            viewController.present(oauthDialog, animated: true, completion: nil)
-        } else {
-            logger.log(.login, "Already have valid server login credentials. Logging in with previous login token", .normal)
-        }
-    }
-    
+// FIXME 2024-01-11 Disabled OAuth on visionOS because UIViewController is not available
+//     func login<T: UIViewController>(with service: MeteorLoginService, clientId: String, viewController: T) {
+//         if !loginWithToken(nil) {
+//             let oauthDialog = MeteorOAuthViewController()
+//             oauthDialog.serviceName = service.rawValue.capitalized
+//             let oauth = MeteorOAuth(socket.url.absoluteString)
+//             oauthDialog.url = URL(string: oauth.getServiceUrl(service, clientId: clientId))
+//             viewController.present(oauthDialog, animated: true, completion: nil)
+//         } else {
+//             logger.log(.login, "Already have valid server login credentials. Logging in with previous login token", .normal)
+//         }
+//     }
+
 }
 
 
