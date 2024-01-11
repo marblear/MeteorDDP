@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'MeteorDDP'
-  s.version          = '2.5'
+  s.version          = '2.5.1'
   s.summary          = 'A client for Meteor servers, written in Swift 5!'
 
 # This description is used to generate tags and improve search results.
@@ -21,18 +21,19 @@ Pod::Spec.new do |s|
 MeteorDDP is really helpful to integrate servers written in meteor (a framework written in javascript) using native Swift in iOS.
                        DESC
 
-  s.homepage         = 'https://github.com/engrahsanali/MeteorDDP'
+  s.homepage         = 'https://github.com/marblear/MeteorDDP'
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'engrahsanali' => 'hafiz.m.ahsan.ali@gmail.com' }
-  s.source           = { :git => 'https://github.com/engrahsanali/MeteorDDP.git', :tag => s.version.to_s }
+  s.source           = { :git => 'https://github.com/marblear/MeteorDDP.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
   s.libraries              = 'z'
 
   s.ios.deployment_target = '9.0'
+  s.visionos.deployment_target = '1.0'
 
   s.source_files = 'MeteorDDP/Classes/**/*'
-  
+
   # s.resource_bundles = {
   #   'MeteorDDP' => ['MeteorDDP/Assets/*.png']
   # }
@@ -40,7 +41,7 @@ MeteorDDP is really helpful to integrate servers written in meteor (a framework 
   # s.public_header_files = 'Pod/Classes/**/*.h'
   # s.frameworks = 'UIKit', 'MapKit'
   # s.dependency 'AFNetworking', '~> 2.3'
-  
+
   s.dependency 'CryptoSwift', '~> 1.4.0'
   s.dependency 'Starscream', '~> 4.0.4'
   s.swift_version = '5.1.2'
