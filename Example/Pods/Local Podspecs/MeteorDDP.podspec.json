@@ -1,9 +1,9 @@
 {
   "name": "MeteorDDP",
-  "version": "2.5",
+  "version": "2.5.1",
   "summary": "A client for Meteor servers, written in Swift 5!",
   "description": "MeteorDDP is really helpful to integrate servers written in meteor (a framework written in javascript) using native Swift in iOS.",
-  "homepage": "https://github.com/engrahsanali/MeteorDDP",
+  "homepage": "https://github.com/marblear/MeteorDDP",
   "license": {
     "type": "MIT",
     "file": "LICENSE"
@@ -12,12 +12,13 @@
     "engrahsanali": "hafiz.m.ahsan.ali@gmail.com"
   },
   "source": {
-    "git": "https://github.com/engrahsanali/MeteorDDP.git",
-    "tag": "2.5"
+    "git": "https://github.com/marblear/MeteorDDP.git",
+    "tag": "2.5.1"
   },
   "libraries": "z",
   "platforms": {
-    "ios": "9.0"
+    "ios": "9.0",
+    "visionos": "1.0"
   },
   "source_files": "MeteorDDP/Classes/**/*",
   "dependencies": {

@@ -1,6 +1,6 @@
 PODS:
   - CryptoSwift (1.4.0)
-  - MeteorDDP (2.5):
+  - MeteorDDP (2.5.1):
     - CryptoSwift (~> 1.4.0)
     - Starscream (~> 4.0.4)
   - Starscream (4.0.4)
@@ -19,9 +19,9 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   CryptoSwift: 7cc902df1784de3b389a387756c7d710f197730c
-  MeteorDDP: 82851ae0b588c3e74f09a8bfbc0c3f423f95dc08
+  MeteorDDP: ea7f067e392090b1d0ee7e36e1ad3cf08b22565d
   Starscream: 5178aed56b316f13fa3bc55694e583d35dd414d9
 
-PODFILE CHECKSUM: 8ccb239062cbdfe169ef1767773c72eb323ff1fb
+PODFILE CHECKSUM: c58c34ae0eb518c800406e34afc37580dfe7e9b3
 
-COCOAPODS: 1.11.2
+COCOAPODS: 1.14.3
