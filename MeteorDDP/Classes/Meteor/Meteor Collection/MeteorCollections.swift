@@ -59,8 +59,7 @@ open class MeteorCollections {
     }
     
     /// Bind observers
-    func bindEvents() {
-        
+    func bindEvents(_ name: String) {
         client.addEventObserver(name, event: .dataAdded) {
             guard let value = $0 as? MeteorDocument else {
                 return
@@ -124,15 +123,26 @@ public extension MeteorCollections {
     func localUpdate(_ id: String, updated: MeteorKeyValue, cleared: [String]?) {
         
         if var document = _documents[id] {
-            document = updated
+            mergeDictionaries(original: &document, updated: updated)
             cleared?.forEach {
                 document[$0] = nil
             }
-            self._documents[id] = document
+            _documents[id] = document
             broadcastChange(id)
         }
     }
     
+    private func mergeDictionaries(original: inout MeteorKeyValue, updated: [String: Any], deep: Bool = false) {
+        for (key, value) in updated {
+            if deep == true, var originalSubDict = original[key] as? [String: Any], let updatedSubDict = value as? [String: Any] {
+                mergeDictionaries(original: &originalSubDict, updated: updatedSubDict)
+                original[key] = originalSubDict
+            } else {
+                original[key] = value
+            }
+        }
+    }
+
     /// Removes local document
     /// - Parameter id: ID of the document
     func localRemove(_ id: String) {
@@ -242,8 +252,8 @@ public extension MeteorCollections {
 
         unsubscribe(name)
         client.collections[name] = self
-        
-        bindEvents()
+
+        bindEvents(collectionName ?? name)
         return client.subscribe(name, params: params, collectionName: collectionName, callback: callback)
     }
     
