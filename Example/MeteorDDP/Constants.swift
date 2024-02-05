@@ -9,8 +9,7 @@
 import MeteorDDP
 
 let meteor: MeteorClient = {
-    MeteorClient(url: url)
-//    MeteorClient(url: url, webSocket: .webSocketTask)
+    MeteorClient(url: url, webSocket: .webSocketTask)
 }()
 
 let meteorCollection: MeteorCollections = {
