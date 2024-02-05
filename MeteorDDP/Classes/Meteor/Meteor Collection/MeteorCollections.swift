@@ -36,6 +36,7 @@ open class MeteorCollections {
 
     internal let client: MeteorClient
 
+    /// Collection name
     internal var name: String!
 
     open var updateDelay: TimeInterval = 0.33
@@ -53,12 +54,15 @@ open class MeteorCollections {
 
     /// Initializes a MeteorCollection object
     /// - Parameter name: The string name of the collection (must match the name of the collection on the server)
-    public init(client: MeteorClient) {
+    public init(client: MeteorClient, name: String) {
         self.client = client
+        self.name = name
+        client.collections[name] = self
+        bindEvents()
     }
 
     /// Bind observers
-    func bindEvents(_ name: String) {
+    func bindEvents() {
         client.addEventObserver(name, event: .dataAdded) {
             guard let value = $0 as? MeteorDocument else {
                 return
@@ -231,37 +235,6 @@ public extension MeteorCollections {
                 self._documents[id] = document
                 self.broadcastChange(id)
             }
-        }
-    }
-}
-
-// MARK: - 🚀 MeteorCollection -
-
-public extension MeteorCollections {
-    /// Subscribe
-    /// - Parameters:
-    ///   - name: string
-    ///   - params: params
-    ///   - callback: completion
-    @discardableResult
-    func subscribe(_ name: String, params: [Any]?, collectionName: String? = nil, callback: MeteorCollectionCallback? = nil) -> String {
-        self.name = name
-
-        unsubscribe(name)
-        client.collections[name] = self
-
-        bindEvents(collectionName ?? name)
-        return client.subscribe(name, params: params, collectionName: collectionName, callback: callback)
-    }
-
-    /// Unsubscribe
-    /// - Parameter name: string
-    func unsubscribe(_ name: String) {
-        self.name = name
-
-        if client.collections[name] != nil {
-            client.unsubscribe(withName: name, callback: nil)
-            client.collections[name] = nil
         }
     }
 }

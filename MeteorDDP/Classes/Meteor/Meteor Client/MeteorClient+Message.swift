@@ -110,8 +110,7 @@ internal extension MeteorClient {
                 
             case .sub(let s):
                 handleSub(message, type: s)
-                message.log(.incomming)
-                
+                message.log(.incoming)
             }
             
         }

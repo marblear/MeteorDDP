@@ -77,36 +77,52 @@ internal extension MeteorClient {
     @discardableResult
     func sub(_ id: String, name: String, params: [Any]?, collectionName: String?, callback: MeteorCollectionCallback?, completion: MeteorCompletionVoid?) -> String {
         var messages: [MessageOut]
-        if let subRequest = subRequests[name] { // Previously binded messages with same callbacks
-            messages = subRequest.messages
-        }
-        else {
-            messages = [.msg(.sub), .name(name), .id(id)]
-            if let p = params { messages.append(.params(p)) }
-            
-            subRequests[name] = SubRequest(id: id, messages: messages) // Request object from sub name
-            
-            let subHolder = SubHolder(name: name, collectionName: collectionName, completion: completion, callback: callback)
-            subHandler[id] = subHolder
-            
-            if let collectionName = collectionName {
-                subCollections[collectionName] = subHolder // Get id from collectionName
-            }
-        }
         
-        userBackground.addOperation() { [weak self] in
-            
-            if let self = self {
-                self.sendMessage(msgs: messages)
+        /// get id of previous sub request with the same name
+
+        var previousId: String?
+        if let subRequest = subRequests[name] { /// Previously bound messages with same callbacks
+            previousId = subRequest.id
+        }
+        messages = [.msg(.sub), .name(name), .id(id)]
+        if let p = params { messages.append(.params(p)) }
+
+        subRequests[name] = SubRequest(id: id, messages: messages) // Request object from sub name
+
+        let subHolder = SubHolder(name: name, collectionName: collectionName, completion: completion, callback: callback)
+        subHandler[id] = subHolder
+
+        if let collectionName = collectionName {
+            subCollections[collectionName] = subHolder // Get id from collectionName
+        }
+
+        let subOperation = BlockOperation { [weak self] in
+            if let strongSelf = self {
+                strongSelf.sendMessage(msgs: messages)
             } else {
                 logger.logError(.sub, "MeteorClient destroyed or not initiated yet. Message ignored")
             }
         }
+        subSendQueue.addOperation(subOperation)
+        
+        /// We have to unsubscribe to the previous sub after subscribing to the new one;
+        /// this makes Meteor send remove messages for documents that are not in scope anymore
+        if let unsubId = previousId  {
+            let unsubOperation = BlockOperation { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.sendMessage(msgs: [.msg(.unsub), .id(unsubId)])
+                }
+            }
+            unsubOperation.addDependency(subOperation)
+            subSendQueue.addOperation(unsubOperation)
+        }
+        
         return id
     }
 
     func clearSubRequestData(with id: String) {
         guard let handler = subHandler[id] else { return }
+        logger.log(.sub, "Clear sub request data \(handler.name) for id:\(id)", .debug)
         subRequests[handler.name] = nil
         subHandler[id] = nil
     }
@@ -133,7 +149,7 @@ public extension MeteorClient {
     ///   - id: The name of the subscription
     ///   - callback: The closure to be executed when the server sends a 'ready' message
     func unsubscribe(_ id: String, completion: MeteorCompletionVoid?) {
-        backgroundQueue.addOperation() {
+        backgroundQueue.addOperation {
             self.sendMessage(msgs: [.msg(.unsub), .id(id)])
         }
         subHandler[id]?.completion = completion
@@ -162,7 +178,7 @@ public extension MeteorClient {
             removeEventObservers(name, event: MeteorEvents.collection)
         }
         unsubscribe(id) {
-            logger.log(.unsub, "Removed data due to unsubscribe", .info)
+            logger.log(.unsub, "Removed data due to unsubscribe \(name)", .debug)
             self.subRequests[name] = nil
             DispatchQueue.main.async { callback?() }
         }

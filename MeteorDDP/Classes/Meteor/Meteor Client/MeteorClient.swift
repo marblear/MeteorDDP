@@ -90,6 +90,15 @@ public final class MeteorClient {
         return queue
     }()
     
+    // Sub requests are sent in the order they are created
+    let subSendQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.name = "\(METEOR_DDP) Sub Queue"
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .userInitiated
+        return queue
+    }()
+    
     // Callbacks execute in the order they're received
     let subResultQueue: OperationQueue = {
         let queue = OperationQueue()
