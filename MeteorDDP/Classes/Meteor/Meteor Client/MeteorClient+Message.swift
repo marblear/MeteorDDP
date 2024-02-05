@@ -106,7 +106,7 @@ internal extension MeteorClient {
                 
             case .method(let s):
                 handleMethod(message, type: s)
-                message.log(.incomming)
+                message.log(.incoming)
                 
             case .sub(let s):
                 handleSub(message, type: s)

@@ -34,7 +34,7 @@
 open class MeteorLogger {
     
     public enum Level {
-        case normal, incomming, info, none
+        case normal, incoming, info, none, debug
     }
     
     /// Flag to allow logging information  in the application
@@ -48,8 +48,7 @@ open class MeteorLogger {
         guard (MeteorLogger.loggingLevel != .none) && ((type == MeteorLogger.loggingLevel) || MeteorLogger.loggingLevel == .normal) else {
             return
         }
-        print("\n ❕ ❕ ❕ 🚀 \(METEOR_DDP) ❕ ❕ ❕\n", "\(label.rawValue) 👉🏼 \(items)", terminator: "\n\n")
-
+        print("🚀 \(METEOR_DDP) \(label.rawValue) 👉🏼 \(items)")
     }
     
     /// Print log information
@@ -81,5 +80,6 @@ internal extension MeteorLogger {
         case socket = "Web Socket"
         case mainThread = "Main Thread Warning"
         case error = "Meteor Error"
+        case events = "Event Handling"
     }
 }
