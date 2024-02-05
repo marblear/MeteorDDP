@@ -6,19 +6,19 @@
 //  Copyright (c) 2020 engrahsanali. All rights reserved.
 //
 /*
- 
+
  Copyright (c) 2020 Muhammad Ahsan Ali, AA-Creations
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in all
  copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,23 +26,23 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
- 
-*/
 
-// MARK:- 🚀 MeteorClient+Sub - interacting with basic Meteor server-side services
+ */
+
+// MARK: - 🚀 MeteorClient+Sub - interacting with basic Meteor server-side services
+
 internal extension MeteorClient {
-    
     /// Iterates over the Dictionary of subscriptions to find a subscription by name
     /// - Parameter name: name
-    
+
     func findSubscriptionId(byName name: String) -> String? {
         subRequests[name]?.id
     }
-    
+
     func findSubscription(byCollection name: String) -> SubHolder? {
         subCollections[name]
     }
-    
+
     /// Sub Ready
     /// - Parameter subs: sub IDs array
     func ready(_ subs: [String]) {
@@ -53,7 +53,7 @@ internal extension MeteorClient {
             }
         }
     }
-    
+
     /// UnSub
     /// - Parameters:
     ///   - id: ID
@@ -67,7 +67,7 @@ internal extension MeteorClient {
         }
         error.log(.unsub)
     }
-    
+
     /// Subcscrption
     /// - Parameters:
     ///   - id: ID
@@ -76,9 +76,7 @@ internal extension MeteorClient {
     ///   - callback: callback
     @discardableResult
     func sub(_ id: String, name: String, params: [Any]?, collectionName: String?, callback: MeteorCollectionCallback?, completion: MeteorCompletionVoid?) -> String {
-        
         var messages: [MessageOut]
-        
         if let subRequest = subRequests[name] { // Previously binded messages with same callbacks
             messages = subRequest.messages
         }
@@ -114,9 +112,9 @@ internal extension MeteorClient {
     }
 }
 
-// MARK:- MeteorClient Sub for interacting with basic Meteor server-side services
+// MARK: - MeteorClient Sub for interacting with basic Meteor server-side services
+
 public extension MeteorClient {
-    
     /// Sends a subscription request to the server. If a callback is passed, the callback asynchronously runs when the client receives a 'ready' message indicating that the initial subset of documents contained in the subscription has been sent by the server.
     /// - Parameters:
     ///   - name: The name of the subscription
@@ -141,13 +139,13 @@ public extension MeteorClient {
         subHandler[id]?.completion = completion
         logger.log(.unsub, "with id [\(id)]", .info)
     }
-    
+
     /// UnSub All
     /// - Parameter callback: completion
     func unsubscribeAll(_ completion: MeteorCompletionVoid?) {
         subHandler.keys.forEach { unsubscribe($0, completion: completion) }
     }
-    
+
     /// Unsubscribe Sends an unsubscribe request to the server.
     /// - Parameters:
     ///   - name: The name of the subscription
@@ -169,8 +167,7 @@ public extension MeteorClient {
             DispatchQueue.main.async { callback?() }
         }
     }
-        
-    
+
     /// Unsubscribe collection
     /// - Parameters:
     ///   - name: name of the collection
@@ -178,12 +175,12 @@ public extension MeteorClient {
     ///   - callback: completion callback
     func unsubscribe(withCollection name: String, allowRemove: Bool = true, callback: MeteorCompletionVoid?) {
         if let sub = findSubscription(byCollection: name) {
-            self.unsubscribe(withName: sub.name, allowRemove: allowRemove, callback: callback)
-        }
-        else {
+            unsubscribe(withName: sub.name, allowRemove: allowRemove, callback: callback)
+        } else {
             callback?()
         }
     }
+
     /// Update Collection
     /// - Parameters:
     ///   - collection: name
@@ -195,35 +192,33 @@ public extension MeteorClient {
         let callName = "/\(collection)/\(type.rawValue)"
         return call(callName, params: documents, callback: callback)
     }
-    
-    
+
     /// Check if the collection name or subscription name is already subscribed
     /// - Parameter name: collection name or subscription name
     /// - Returns:isSubcribed flag
     func isSubcribed(_ name: String) -> Bool {
         findSubscriptionId(byName: name) != nil ||
-        findSubscription(byCollection: name) != nil
+            findSubscription(byCollection: name) != nil
     }
-    
-    func subscribe(name: String, of collection: String, params: [String: Any]?, allowRemove: Bool, callback: @escaping ((MeteorDocument, MeteorCollectionEvents) -> ())) {
-        
+
+    func subscribe(name: String, of collection: String, params: [String: Any]?, allowRemove: Bool, callback: @escaping ((MeteorDocument, MeteorCollectionEvents) -> Void)) {
         removeEventObservers(collection, event: [.dataAdded, .dataRemove, .dataChange])
-        
+
         addEventObserver(collection, event: .dataAdded) {
             let value = $0 as! MeteorDocument
             callback(value, .dataAdded)
         }
-        
+
         addEventObserver(collection, event: .dataChange) {
             let value = $0 as! MeteorDocument
             callback(value, .dataChange)
         }
-        
+
         addEventObserver(collection, event: .dataRemove) {
             let value = $0 as! MeteorDocument
             callback(value, .dataRemove)
         }
-        
+
         unsubscribe(withCollection: collection, allowRemove: allowRemove) {
             self.subscribe(name, params: [params as Any], collectionName: collection, callback: nil, completion: nil)
         }

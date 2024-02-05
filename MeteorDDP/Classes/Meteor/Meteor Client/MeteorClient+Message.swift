@@ -146,7 +146,6 @@ fileprivate extension MeteorClient {
             case .removed:
                 event = .dataRemove
                 result = MeteorDocument(name: collection, id: id, fields: nil, cleared: nil)
-                
             }
             
             broadcastEvent(collection, event: event.meteorEvent, value: result)
