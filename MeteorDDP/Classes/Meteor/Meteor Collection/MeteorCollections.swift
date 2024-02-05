@@ -109,6 +109,8 @@ public extension MeteorCollections {
     ///   - id: ID of the document
     ///   - fields: new fields
     func localInsert(_ id: String, fields: MeteorKeyValue) {
+        var fields = fields
+        fields["_id"] = id
         _documents[id] = fields
         broadcastChange(id)
     }
