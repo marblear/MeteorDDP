@@ -167,7 +167,7 @@ public extension MeteorCollections {
 
         document["_id"] = id
 
-        client.updateColection(name, type: .insert, documents: [document]) { _, error in
+        client.updateCollection(name, type: .insert, documents: [document]) { _, error in
             if let error = error {
                 error.log(.doc)
                 self._documents[id] = nil
@@ -190,7 +190,7 @@ public extension MeteorCollections {
         _documents[id] = document
         broadcastChange(id)
 
-        client.updateColection(name, type: .update, documents: [["_id": id], operation]) { _, error in
+        client.updateCollection(name, type: .update, documents: [["_id": id], operation]) { _, error in
             if let error = error {
                 error.log(.doc)
                 self._documents[id] = originalDocument
@@ -210,7 +210,7 @@ public extension MeteorCollections {
         _documents[id] = document
         broadcastChange(id)
 
-        client.updateColection(name, type: .update, documents: [["_id": id], ["$set": document]]) { _, error in
+        client.updateCollection(name, type: .update, documents: [["_id": id], ["$set": document]]) { _, error in
             if let error = error {
                 error.log(.doc)
                 self._documents[id] = originalDocument
@@ -229,7 +229,7 @@ public extension MeteorCollections {
         localRemove(id)
         broadcastChange(id)
 
-        client.updateColection(name, type: .remove, documents: [["_id": id]]) { _, error in
+        client.updateCollection(name, type: .remove, documents: [["_id": id]]) { _, error in
             if let error = error {
                 error.log(.doc)
                 self._documents[id] = document

@@ -82,7 +82,9 @@ internal extension MeteorClient {
 
         var previousId: String?
         if let subRequest = subRequests[name] { /// Previously bound messages with same callbacks
-            previousId = subRequest.id
+            if subRequest.id != id {
+                previousId = subRequest.id
+            }
         }
         messages = [.msg(.sub), .name(name), .id(id)]
         if let p = params { messages.append(.params(p)) }
@@ -104,10 +106,10 @@ internal extension MeteorClient {
             }
         }
         subSendQueue.addOperation(subOperation)
-        
+
         /// We have to unsubscribe to the previous sub after subscribing to the new one;
         /// this makes Meteor send remove messages for documents that are not in scope anymore
-        if let unsubId = previousId  {
+        if let unsubId = previousId {
             let unsubOperation = BlockOperation { [weak self] in
                 if let strongSelf = self {
                     strongSelf.sendMessage(msgs: [.msg(.unsub), .id(unsubId)])
@@ -116,7 +118,7 @@ internal extension MeteorClient {
             unsubOperation.addDependency(subOperation)
             subSendQueue.addOperation(unsubOperation)
         }
-        
+
         return id
     }
 
@@ -204,7 +206,7 @@ public extension MeteorClient {
     ///   - documents: documents data
     ///   - callback: completion
     @discardableResult
-    func updateColection(_ collection: String, type: CollectionMethod, documents: [Any], callback: MeteorMethodCallback? = nil) -> String {
+    func updateCollection(_ collection: String, type: CollectionMethod, documents: [Any], callback: MeteorMethodCallback? = nil) -> String {
         let callName = "/\(collection)/\(type.rawValue)"
         return call(callName, params: documents, callback: callback)
     }

@@ -6,19 +6,19 @@
 //  Copyright (c) 2020 engrahsanali. All rights reserved.
 //
 /*
- 
+
  Copyright (c) 2020 Muhammad Ahsan Ali, AA-Creations
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in all
  copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,27 +26,28 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
- 
-*/
+
+ */
 
 import Starscream
 import SystemConfiguration
 
-// MARK:- WebSocketMethod
+// MARK: - WebSocketMethod
+
 public enum WebSocketMethod {
     case starscream, webSocketTask, custom
 }
 
-// MARK:- 🚀 MeteorWebSockets
+// MARK: - 🚀 MeteorWebSockets
+
 public class MeteorWebSockets {
-    
     internal var url: URL
     internal var socket: Any?
     internal var preferredMethod: WebSocketMethod
-    internal var onEvent: ((WebSocketEvent) -> ())?
+    internal var onEvent: ((WebSocketEvent) -> Void)?
     internal var timeout: TimeInterval
     internal var isConnected: Bool = false
-    
+
     /// Init
     /// - Parameters:
     ///   - url: websocket url endpoint
@@ -54,88 +55,79 @@ public class MeteorWebSockets {
     ///   - timeout: request timeout
     public init(_ url: String, _ method: WebSocketMethod = .webSocketTask, _ timeout: Double) {
         self.url = url.websocketUrl
-        self.preferredMethod = method
+        preferredMethod = method
         self.timeout = TimeInterval(timeout)
     }
-    
 }
 
+// MARK: - 🚀 MeteorDDP - MeteorWebSockets internal extension
 
-// MARK:- 🚀 MeteorDDP - MeteorWebSockets internal extension
 internal extension MeteorWebSockets {
-    
     /// Configuration
     func configureWebSocket() {
         socket = nil
-        
+
         if preferredMethod == .webSocketTask {
             if #available(iOS 13.0, *) { socket = configureWebSocketTask() }
             else { preferredMethod = .custom }
         }
-        
+
         if socket == nil {
             switch preferredMethod {
-            case .starscream:       socket = configureStarscream()
-            default:                socket = configureWebSocketCustom()
+            case .starscream: socket = configureStarscream()
+            default: socket = configureWebSocketCustom()
             }
         }
-
     }
-    
+
     /// Disconnect on demand
     func disconnect() {
         if let socket = socket as? WebSocket {
             socket.forceDisconnect()
-        }
-        else if let socket = socket as? WebSocketCustom {
+        } else if let socket = socket as? WebSocketCustom {
             socket.close()
-        }
-        else if #available(iOS 13.0, *) {
+        } else if #available(iOS 13.0, *) {
             if let socket = socket as? WebSocketTask {
                 socket.disconnect()
             }
         }
     }
-    
+
     /// Send message to websocket
     /// - Parameter text: String
     func send(_ text: String) {
         if let socket = socket as? WebSocket {
             socket.write(string: text, completion: nil)
-        }
-        else if let socket = socket as? WebSocketCustom {
+        } else if let socket = socket as? WebSocketCustom {
             socket.send(text)
-        }
-        else if #available(iOS 13.0, *) {
+        } else if #available(iOS 13.0, *) {
             if let socket = socket as? WebSocketTask {
                 socket.send(text: text)
             }
         }
     }
-    
+
     /// Check network connectivity and through Error
     var noInternetError: Error? {
         guard !isConnectedToNetwork else {
             return nil
         }
-        
+
         return NSError(domain: "", code: -1009, userInfo: nil)
-        
     }
-    
+
     /// Check network connectivity
     var isConnectedToNetwork: Bool {
-        
         var zeroAddress = sockaddr_in()
         zeroAddress.sin_len = UInt8(MemoryLayout.size(ofValue: zeroAddress))
         zeroAddress.sin_family = sa_family_t(AF_INET)
-        
+
         let defaultRouteReachability = withUnsafePointer(to: &zeroAddress) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {zeroSockAddress in
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { zeroSockAddress in
                 SCNetworkReachabilityCreateWithAddress(nil, zeroSockAddress)
             }
         }
-        
+
         var flags = SCNetworkReachabilityFlags()
         if !SCNetworkReachabilityGetFlags(defaultRouteReachability!, &flags) {
             return false
@@ -143,13 +135,12 @@ internal extension MeteorWebSockets {
         let isReachable = (flags.rawValue & UInt32(kSCNetworkFlagsReachable)) != 0
         let needsConnection = (flags.rawValue & UInt32(kSCNetworkFlagsConnectionRequired)) != 0
         return (isReachable && !needsConnection)
-        
     }
 }
 
 // MARK: Configure different Websocket methods
+
 private extension MeteorWebSockets {
-    
     /// Configure Starscream Websocket
     func configureStarscream() -> WebSocket {
         var request = URLRequest(url: url)
@@ -157,17 +148,17 @@ private extension MeteorWebSockets {
         let socket = WebSocket(request: request)
         socket.onEvent = { event in
             switch event {
-            case .connected(let session):
+            case let .connected(session):
                 self.isConnected = true
                 self.onEvent?(.connected)
                 logger.log(.socket, "Connection started with session \(session)", .info)
-            case .disconnected(let reason, let code):
+            case let .disconnected(reason, code):
                 self.isConnected = false
                 self.onEvent?(.disconnected)
                 logger.log(.socket, "Connection closed with code \(code). \(reason)", .info)
-            case .text(let text):
+            case let .text(text):
                 self.onEvent?(.text(text))
-            case .error(let error):
+            case let .error(error):
                 self.isConnected = false
                 self.onEvent?(.error(error))
             case .cancelled:
@@ -176,12 +167,11 @@ private extension MeteorWebSockets {
             default:
                 self.isConnected = false
                 self.onEvent?(.error(self.noInternetError))
-                
             }
         }
         return socket
     }
-    
+
     /// Configure URLSessionWebSocketTask
     @available(iOS 13.0, *)
     func configureWebSocketTask() -> WebSocketTask {
@@ -191,7 +181,7 @@ private extension MeteorWebSockets {
         socket.connect()
         return socket
     }
-    
+
     /// Configure WebSocketCustom
     func configureWebSocketCustom() -> WebSocketCustom {
         let socket = WebSocketCustom(url: url)
@@ -224,5 +214,4 @@ private extension MeteorWebSockets {
         socket.open(nsurl: url)
         return socket
     }
-    
 }

@@ -6,19 +6,19 @@
 //  Copyright (c) 2020 engrahsanali. All rights reserved.
 //
 /*
- 
+
  Copyright (c) 2020 Muhammad Ahsan Ali, AA-Creations
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in all
  copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,53 +26,58 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
- 
-*/
+
+ */
 
 //
 // This software uses CryptoSwift: https://github.com/krzyzanowskim/CryptoSwift/
 //
 
-import Foundation
 import CryptoSwift
+import Foundation
 
-// MARK:- 🚀 Meteor Client - Responsible to manage DDP interaction with provided websocket events
+// MARK: - 🚀 Meteor Client - Responsible to manage DDP interaction with provided websocket events
+
 public final class MeteorClient {
-    
-    var version: String                                     // ddp version
-    
-    var support: [String]                                   // ddp support
-    
-    var socket: MeteorWebSockets                            // web sockets
-    
-    var subHandler = [String: SubHolder]()                  // subscription handler
-    
-    var subCollections = [String: SubHolder]()              // subscription holder for collection names
-    
-    var observers = [String: NSObjectProtocol]()            // mongo collection observers
+    /// ddp version
+    var version: String
+    /// ddp support
+    var support: [String]
+    /// web sockets
+    var socket: MeteorWebSockets
+    /// subscription handler
+    var subHandler = [String: SubHolder]()
+    /// subscription holder for collection names
+    var subCollections = [String: SubHolder]()
+    /// mongo collection observers
+    var observers = [String: NSObjectProtocol]()
+    // subscription requests against names
+    var subRequests = [String: SubRequest]()
+    /// methods handler
+    var methodHandler: [String: MethodHolder]?
+    /// persisted logged in user
+    var loggedInUser: UserHolder?
+    /// exponantional back off for ddp failure
+    var backOff = ExponentialBackoff()
+    /// ddp ping pong
+    var server: (ping: Date?, pong: Date?) = (nil, nil)
+    /// collections handler with name
+    var collections = [String: MeteorCollections]()
+    /// meteor session connected callback
+    var onSessionConnected: ((String) -> Void)?
+    /// Session id for reconnection
+    public var sessionId: String?
+    /// flag to auto sub if websocket disconnect
+    public var autoSubReconnect: Bool = true
+    /// will be set to false on first successful connect
+    public var firstConnect: Bool = true
+    /// flag for auto connection if websocket disconnect
+    public var autoReconnect: Bool = true
+    /// flag if auto-reconnect is in progress
+    public var tryingToReconnect: Bool = false
+    /// meteor ddp and websocket events delegate
+    public weak var delegate: MeteorDelegate?
 
-    var subRequests = [String: SubRequest]()                // subscription requests against names
-
-    var methodHandler: [String: MethodHolder]?              // methods handler
-    
-    var loggedInUser: UserHolder?                           // persisted logged in user
-    
-    var backOff = ExponentialBackoff()                      // exponantional back off for ddp failure
-    
-    var server: (ping: Date?, pong: Date?) = (nil, nil)     // ddp ping pong
-        
-    var collections = [String: MeteorCollections]()         // collections handler with name
-    
-    var onSessionConnected: ((String) -> ())?               // meteor session connected callback
-
-    public var sessionId: String? = nil                     // Session id for reconnection
-    
-    public var autoSubReconnect: Bool = true                // flag to auto sub if websocket disconnect
-    
-    public var autoReconnect: Bool = true                   // flag for auto connection if websocket disconnect
-
-    weak public var delegate: MeteorDelegate?               // meteor ddp and websocket events delegate
-    
     // Background data queue
     let backgroundQueue: OperationQueue = {
         let queue = OperationQueue()
@@ -80,7 +85,7 @@ public final class MeteorClient {
         queue.qualityOfService = .background
         return queue
     }()
-    
+
     // Callbacks execute in the order they're received
     let methodResultQueue: OperationQueue = {
         let queue = OperationQueue()
@@ -89,7 +94,7 @@ public final class MeteorClient {
         queue.qualityOfService = .userInitiated
         return queue
     }()
-    
+
     // Sub requests are sent in the order they are created
     let subSendQueue: OperationQueue = {
         let queue = OperationQueue()
@@ -98,7 +103,7 @@ public final class MeteorClient {
         queue.qualityOfService = .userInitiated
         return queue
     }()
-    
+
     // Callbacks execute in the order they're received
     let subResultQueue: OperationQueue = {
         let queue = OperationQueue()
@@ -305,11 +310,6 @@ internal extension MeteorClient {
         if subRequests[loginServiceConfig] != nil {
             subscribe(loginServiceConfig, params: nil)
         }
-        if autoSubReconnect {
-            subRequests.forEach { name, req in
-                sub(req.id, name: name, params: nil, collectionName: nil, callback: nil, completion: nil)
-            }
-        }
 
         if !loginWithToken({ _, error in
             logger.log(.login, "Meteor login callback error \(String(describing: error?.reason))", .info)
@@ -323,6 +323,16 @@ internal extension MeteorClient {
         }) {
             logger.log(.login, "Meteor login error", .info)
             logout()
+        }
+    }
+
+    /// Will be called after a socket connection has been restored after a connection breakup
+    /// to restore all previous subscriptions (if autoSubReconnect is true)
+    func restoreSubscriptions() {
+        if !autoSubReconnect { return }
+        subRequests.forEach { name, req in
+            logger.log(.login, "auto sub reconnect", .debug)
+            sub(req.id, name: name, params: nil, collectionName: nil, callback: nil, completion: nil)
         }
     }
 }

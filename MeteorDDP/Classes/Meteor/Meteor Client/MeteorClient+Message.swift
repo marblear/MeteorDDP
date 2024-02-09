@@ -46,7 +46,7 @@ internal extension MeteorClient {
             if let id = id {
                 msg.append(.id(id))
             }
-            self.sendMessage(msgs: msg)
+            self.sendMessage(msgs: msg, log: false)
         }
     }
     
@@ -70,6 +70,13 @@ internal extension MeteorClient {
                     self.sessionId = message.session
                     self.onSessionConnected?(sessionId!)
                     self.loginServiceSubscription()
+                    
+                    if firstConnect {
+                        firstConnect = false
+                    } else {
+                        self.restoreSubscriptions()
+                    }
+                    
                     self.broadcastEvent(MeteorEvents.connected.rawValue, event: .connected, value: sessionId!)
                     message.log(.info)
                     
