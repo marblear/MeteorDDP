@@ -29,6 +29,8 @@
  
 */
 
+import CryptoSwift
+
 // MARK:- 🚀 MeteorClient MessageOut - provide easy handling to ddp outgoing messages
 internal extension MeteorClient {
     

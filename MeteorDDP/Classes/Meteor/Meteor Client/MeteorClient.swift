@@ -33,7 +33,6 @@
 // This software uses CryptoSwift: https://github.com/krzyzanowskim/CryptoSwift/
 //
 
-import CryptoSwift
 import Foundation
 
 // MARK: - 🚀 Meteor Client - Responsible to manage DDP interaction with provided websocket events
