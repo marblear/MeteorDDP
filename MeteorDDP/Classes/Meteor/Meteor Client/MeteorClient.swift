@@ -275,6 +275,12 @@ internal extension MeteorClient {
                 if let error = error {
                     logger.logError(.socket, "\(String(describing: error.localizedDescription))")
                 }
+//                if self.autoReconnect && !self.isConnected && !self.tryingToReconnect {
+//                    self.tryingToReconnect = true
+//                    self.triggerReconnect() { sessionId in
+//                        self.tryingToReconnect = false
+//                    }
+//                }
             }
             self.delegate?.didReceive(name: .websocket, event: event)
         }
