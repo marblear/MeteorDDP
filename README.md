@@ -1,6 +1,6 @@
 # Fork of MeteorDDP
 
-This is a fork of MeteorDDP to make it work with visionOS and better match the behavior of Meteor's own DDP implementation. Thus, it contains quite some breaking changes. If you want to make a suggestion, file an issue. But be aware this is an unmaintained fork.
+This is a fork of MeteorDDP to make it work with visionOS and better match the behavior of Meteor's own DDP implementation. Thus, it contains quite some breaking changes. If you want to make a suggestion, file an issue. But be aware this is an unmaintained fork. We mainly use this for Meteor support in our own visionOS app [Marbleverse](https://apps.apple.com/us/app/marbleverse/id1460917736?platform=vision).
 
 High-level overview of the modifications:
 * Stabilized connection and re-connection handling
