@@ -35,7 +35,7 @@ import Foundation
 extension Error {
     
     /// Error code to integer
-    var code: Int { (self as NSError).code }
+    public var code: Int { (self as NSError).code }
     
     /// No internet error
     public var noInternet: Bool {

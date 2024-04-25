@@ -97,15 +97,15 @@ open class MeteorCollection {
         }
     }
 
-    func onDocumentAdded(_ callback: @escaping MeteorDocumentChangeHandler) {
+    public func onDocumentAdded(_ callback: @escaping MeteorDocumentChangeHandler) {
         documentAdded.append(callback)
     }
 
-    func onDocumentChanged(_ callback: @escaping MeteorDocumentChangeHandler) {
+    public func onDocumentChanged(_ callback: @escaping MeteorDocumentChangeHandler) {
         documentChanged.append(callback)
     }
 
-    func onDocumentRemoved(_ callback: @escaping (String) -> Void) {
+    public func onDocumentRemoved(_ callback: @escaping (String) -> Void) {
         documentRemoved.append(callback)
     }
 

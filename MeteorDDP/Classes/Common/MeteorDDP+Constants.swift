@@ -57,7 +57,7 @@ public protocol MeteorDelegate: AnyObject {
     func didReceive(name : MeteorEvents, event: Any)
 }
 
-extension MeteorKeyValue {
+public extension MeteorKeyValue {
     func convert<T: EJSONCodable>(asType: T.Type) -> T? {
         do {
             let codable = try EJSONDecoder().decode(type: asType, from: self)

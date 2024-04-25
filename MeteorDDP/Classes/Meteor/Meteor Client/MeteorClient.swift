@@ -55,7 +55,7 @@ public class MeteorClient {
     /// methods handler
     var methodHandler: [String: MethodHolder]?
     /// own user, as saved and retrieved from UserDefaults
-    var ownUser: MeteorOwnUser?
+    public var ownUser: MeteorOwnUser?
     /// is user logged in
     var isLoggedIn = false
     /// ddp ping pong
@@ -65,9 +65,9 @@ public class MeteorClient {
     /// session connected callback; will only be called once, when first connection is established
     var onSessionConnected: ((String) -> Void)?
     /// session disconnected callback
-    var onSessionDisconnected: ((String?) -> Void)?
+    public var onSessionDisconnected: ((String?) -> Void)?
     /// session reconnected callback
-    var onSessionReconnected: ((String) -> Void)?
+    public var onSessionReconnected: ((String) -> Void)?
     /// Session id for reconnection
     public var sessionId: String?
     /// auto-resubscribe all subscriptions if a websocket connection has bee re-established

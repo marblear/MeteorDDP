@@ -37,6 +37,12 @@ public extension MeteorClient {
     enum CollectionMethod: String {
         case insert, remove, update
     }
+    
+    /// Current User object
+    struct MeteorOwnUser: Codable {
+        public var id, token: String
+        public var tokenExpires: Date
+    }
 }
 
 // MARK:- 🚀 Meteor Client - Objects to handle DDP messages
@@ -48,11 +54,6 @@ internal extension MeteorClient {
         case createUser, login, logout, forgotPassword
     }
     
-    /// Current User object
-    struct MeteorOwnUser: Codable {
-        var id, token: String
-        var tokenExpires: Date
-    }
     
     /// Subscription object
     struct SubHolder {

@@ -17,8 +17,8 @@ public extension MeteorCollection {
             codable._id = id
             return codable
         } catch {
-            log("document \(id) could not be decoded")
-            log("error: \(error)")
+            logger.logError(.doc, "document \(id) could not be decoded")
+            logger.logError(.doc, "error: \(error)")
             return nil
         }
     }

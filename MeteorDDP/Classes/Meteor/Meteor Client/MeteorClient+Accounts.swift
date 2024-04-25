@@ -98,6 +98,21 @@ public extension MeteorClient {
         let msg: [UserMessage] = [.usernameLogin(username), .password(password)]
         loginUser(params: makeMessage(msg), method: .login, callback: callback)
     }
+    
+    /// Attempts to login a user with a token, if one exists
+    /// - Parameter callback: A closure with result and error parameters describing the outcome of the operation
+    @discardableResult
+    func loginWithToken(callback: MeteorMethodCallback?) -> Bool {
+        if let user = getPersistedUser() {
+            ownUser = user
+            if user.tokenExpires.compare(Date()) == ComparisonResult.orderedDescending {
+                let params = ["resume": user.token]
+                loginUser(params: params, method: .login, callback: callback)
+                return true
+            }
+        }
+        return false
+    }
 
     /// Logs a user out and removes their account data from NSUserDefaults. When it completes, it posts a notification: DDP_USER_DID_LOGOUT on the main queue
     /// - Parameter callback: A closure with result and error parameters describing the outcome of the operation
@@ -173,22 +188,7 @@ internal extension MeteorClient {
             }
         }
     }
-
-    /// Attempts to login a user with a token, if one exists
-    /// - Parameter callback: A closure with result and error parameters describing the outcome of the operation
-    @discardableResult
-    func loginWithToken(callback: MeteorMethodCallback?) -> Bool {
-        if let user = getPersistedUser() {
-            ownUser = user
-            if user.tokenExpires.compare(Date()) == ComparisonResult.orderedDescending {
-                let params = ["resume": user.token]
-                loginUser(params: params, method: .login, callback: callback)
-                return true
-            }
-        }
-        return false
-    }
-
+    
     func tryAutoLogin() {
         let autoLoginAttemptPossible =
             loginWithToken(callback: onLoginResult)
