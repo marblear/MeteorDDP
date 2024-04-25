@@ -14,7 +14,7 @@ import Foundation
 fileprivate let numberRegex = #"Number\w+\((\d+)\)"#
 fileprivate let isoDateRegex = #"ISODate\("([^"]+)"\)"#
 
-extension String {
+public extension String {
     var ejson: String {
         var transformedString = replacingOccurrences(of: numberRegex, with: "$1", options: .regularExpression)
         let matches = transformedString.matches(for: isoDateRegex)

@@ -7,14 +7,14 @@
 
 import Foundation
 
-class EJSONDecoder: JSONDecoder {
+public class EJSONDecoder: JSONDecoder {
 
-    override init() {
+    public override init() {
         super.init()
         self.dateDecodingStrategy = ejsonDateDecodingStrategy()
     }
 
-    func decode<T: Codable>(type: T.Type, from dictionary: [String: Any]) throws -> T {
+    public func decode<T: Codable>(type: T.Type, from dictionary: [String: Any]) throws -> T {
         let data = try JSONSerialization.data(withJSONObject: dictionary, options: [])
         return try decode(T.self, from: data)
     }

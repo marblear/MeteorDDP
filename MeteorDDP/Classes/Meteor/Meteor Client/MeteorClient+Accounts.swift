@@ -196,7 +196,7 @@ internal extension MeteorClient {
             /// auto login not possible, either because
             /// - there is no existing persistant user with a token
             /// - an existing token hnas expired
-            log("MeteorClient.tryAutoLogin: auto-login not possible")
+            logger.log(.login, "MeteorClient.tryAutoLogin: auto-login not possible", .debug)
             completeLogout()
         }
     }

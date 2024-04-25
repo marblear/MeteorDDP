@@ -12,18 +12,18 @@ import Foundation
 /// - partial updating using a partial EJSON that only includes some of the model object properties
 /// - parsing of EJSON's date format { $date: <UnixTimeStamp> }
 
-protocol EJSONCodable: Codable, Equatable {
+public protocol EJSONCodable: Codable, Equatable {
     var _id: String? { get set }
     func updatedInstance(updatedJSON: Data, clearedJSON: Data?) throws -> Self
 }
 
-extension EJSONCodable {
+public extension EJSONCodable {
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs._id == rhs._id
     }
 }
 
-extension EJSONCodable {
+public extension EJSONCodable {
     func updatedInstance(updatedJSON: MeteorKeyValue, clearedJSON: [String: Any]? = nil) throws -> Self {
         let updatedData = try JSONSerialization.data(withJSONObject: updatedJSON, options: [])
         let clearedData = try clearedJSON.map { try JSONSerialization.data(withJSONObject: $0, options: []) }
