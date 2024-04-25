@@ -30,6 +30,7 @@
 */
 
 
+import Foundation
 
 // MARK:- 🚀 MeteorDDP - WebSocketTask internal class
 @available(iOS 13.0, *)
@@ -74,11 +75,18 @@ internal class WebSocketTask: NSObject {
     
     /// Listen incomming messages
     func listen()  {
-        webSocketTask.receive { result in
+        webSocketTask.receive { [weak self] result in
+            guard let self = self else { return }
             switch result {
             case .failure(let error):
                 self.isConnected?(false)
-                self.onEvent?(.error(error))
+                switch error.code {
+                case 57:
+                    /// disconnected
+                    self.onEvent?(.disconnected)
+                default:
+                    self.onEvent?(.error(error))
+                }
             case .success(let message):
                 switch message {
                 case .string(let text):

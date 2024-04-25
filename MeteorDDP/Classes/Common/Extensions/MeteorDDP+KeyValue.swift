@@ -29,6 +29,7 @@
  
 */
 
+import Foundation
 
 // MARK:- 🚀 MeteorDDP - MeteorKeyValue internal extension
 internal extension MeteorKeyValue {

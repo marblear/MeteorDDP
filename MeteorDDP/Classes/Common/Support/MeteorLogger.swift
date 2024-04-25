@@ -29,6 +29,7 @@
  
 */
 
+import Foundation
 
 // MARK:- 🚀 MeteorLogger - Prints the information in defined manner
 open class MeteorLogger {
@@ -59,7 +60,7 @@ open class MeteorLogger {
         guard (MeteorLogger.loggingLevel != .none) else {
             return
         }
-        print("\n ❕ ❕ ❕ 🚀 \(METEOR_DDP) ❕ ❕ ❕\n", "\(label.rawValue) 👉🏼 \(items)", terminator: " ‼️ \n\n")
+        print("🚀 \(METEOR_DDP) \(label.rawValue) 👉🏼 \(items)", terminator: " ‼️\n")
         
     }
 

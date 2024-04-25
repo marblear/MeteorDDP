@@ -29,6 +29,8 @@
  
 */
 
+import Foundation
+
 // MARK:- 🚀 MeteorDDP - Error public extension
 extension Error {
     

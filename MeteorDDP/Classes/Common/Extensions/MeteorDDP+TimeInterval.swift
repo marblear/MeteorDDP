@@ -29,6 +29,8 @@
  
 */
 
+import Foundation
+
 // MARK:- 🚀 MeteorDDP - TimeInterval internal extension
 internal extension TimeInterval {
     

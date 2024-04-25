@@ -37,15 +37,15 @@ import Foundation
 
 // MARK: - 🚀 Meteor Client - Responsible to manage DDP interaction with provided websocket events
 
-public final class MeteorClient {
+public class MeteorClient {
     /// ddp version
     var version: String
     /// ddp support
     var support: [String]
     /// web sockets
     var socket: MeteorWebSockets
-    /// subscription handler
-    var subHandler = [String: SubHolder]()
+    /// subscription handler for subscription ids
+    var subHandlers = [String: SubHolder]()
     /// subscription holder for collection names
     var subCollections = [String: SubHolder]()
     /// mongo collection observers
@@ -54,19 +54,23 @@ public final class MeteorClient {
     var subRequests = [String: SubRequest]()
     /// methods handler
     var methodHandler: [String: MethodHolder]?
-    /// persisted logged in user
-    var loggedInUser: UserHolder?
-    /// exponantional back off for ddp failure
-    var backOff = ExponentialBackoff()
+    /// own user, as saved and retrieved from UserDefaults
+    var ownUser: MeteorOwnUser?
+    /// is user logged in
+    var isLoggedIn = false
     /// ddp ping pong
     var server: (ping: Date?, pong: Date?) = (nil, nil)
     /// collections handler with name
-    var collections = [String: MeteorCollections]()
-    /// meteor session connected callback
+    var collections = [String: MeteorCollection]()
+    /// session connected callback; will only be called once, when first connection is established
     var onSessionConnected: ((String) -> Void)?
+    /// session disconnected callback
+    var onSessionDisconnected: ((String?) -> Void)?
+    /// session reconnected callback
+    var onSessionReconnected: ((String) -> Void)?
     /// Session id for reconnection
     public var sessionId: String?
-    /// flag to auto sub if websocket disconnect
+    /// auto-resubscribe all subscriptions if a websocket connection has bee re-established
     public var autoSubReconnect: Bool = true
     /// will be set to false on first successful connect
     public var firstConnect: Bool = true
@@ -74,81 +78,12 @@ public final class MeteorClient {
     public var autoReconnect: Bool = true
     /// flag if auto-reconnect is in progress
     public var tryingToReconnect: Bool = false
+    /// timer used for auto-reconnect
+    var reconnectionTimer: Timer?
     /// meteor ddp and websocket events delegate
     public weak var delegate: MeteorDelegate?
 
-    // Background data queue
-    let backgroundQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "\(METEOR_DDP) Background Data Queue"
-        queue.qualityOfService = .background
-        return queue
-    }()
-
-    // Callbacks execute in the order they're received
-    let methodResultQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "\(METEOR_DDP) Callback Queue"
-        queue.maxConcurrentOperationCount = 1
-        queue.qualityOfService = .userInitiated
-        return queue
-    }()
-
-    // Sub requests are sent in the order they are created
-    let subSendQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "\(METEOR_DDP) Sub Queue"
-        queue.maxConcurrentOperationCount = 1
-        queue.qualityOfService = .userInitiated
-        return queue
-    }()
-
-    // Callbacks execute in the order they're received
-    let subResultQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "\(METEOR_DDP) Sub Callback Queue"
-        queue.maxConcurrentOperationCount = 1
-        queue.qualityOfService = .userInitiated
-        return queue
-    }()
-
-    // Document messages are processed in the order that they are received, separately from callbacks
-    let documentQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "\(METEOR_DDP) Background Queue"
-        queue.maxConcurrentOperationCount = 1
-        queue.qualityOfService = .background
-        return queue
-    }()
-
-    // Queue for server ping pong handling
-    let heartbeat: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "\(METEOR_DDP) Heartbeat Queue"
-        queue.qualityOfService = .utility
-        return queue
-    }()
-
-    // Background queue for current user
-    let userBackground: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "\(METEOR_DDP) High Priority Background Queue"
-        queue.qualityOfService = .userInitiated
-        return queue
-    }()
-
-    // Main queue for current user
-    let userMainQueue: OperationQueue = {
-        let queue = OperationQueue.main
-        queue.name = "\(METEOR_DDP) High Priorty Main Queue"
-        queue.qualityOfService = .userInitiated
-        return queue
-    }()
-
-    // Main queue for current user
-    let subQueue: DispatchQueue = {
-        DispatchQueue(label: "\(METEOR_DDP)-subscription-handler", attributes: .concurrent)
-    }()
+    let queues = MeteorQueues()
 
     // Warning to avoid synchronous operations on main UI thread
     let syncWarning = { (name: String) in
@@ -208,7 +143,6 @@ public final class MeteorClient {
     public func connect(callback: ((String) -> Void)?) {
         methodHandler = [:]
         onSessionConnected = callback
-        backOff = ExponentialBackoff()
         bindEvent()
         socket.configureWebSocket()
     }
@@ -230,15 +164,31 @@ public final class MeteorClient {
     }
 
     /// Auto trigger reconnection
-    public func triggerReconnect(callback: ((String?) -> Void)? = nil) {
+    public func triggerReconnect(callback: ((String) -> Void)? = nil) {
         guard !isConnected else {
             logger.log(.socket, "MeteorDDP is already connected", .info)
             return
         }
+        guard !tryingToReconnect else {
+            logger.log(.socket, "MeteorDDP is already trying to reconnect", .info)
+            return
+        }
+        tryingToReconnect = true
         broadcastEvent(MeteorEvents.reconnection.rawValue, event: .reconnection, value: callback as Any)
-        backOff.createBackoff {
-            self.connect(callback: callback)
-            self.ping()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            reconnectionTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+                guard let self = self else { return }
+                self.connect { [weak self] sessionId in
+                    guard let self = self else { return }
+                    /// Caution: Do not call onSessionConnected here, since this will be set to this closure in connect(),
+                    /// so we would create an infinite loop
+                    self.onSessionReconnected?(sessionId)
+                    self.tryingToReconnect = false
+                    timer.invalidate()
+                }
+                self.ping()
+            }
         }
     }
 }
@@ -251,20 +201,24 @@ internal extension MeteorClient {
     func sendMessage(msgs: [MessageOut], log: Bool = true) {
         syncWarning("Socket Message send")
         let msg = makeMessage(msgs).toJson!
-        if log { logger.log(.socket, msg, .debug) }
+        if log { logger.log(.socket, msg, .info) }
         socket.send(msg)
     }
 
     /// Bind websocket events
     fileprivate func bindEvent() {
-        let events: ((WebSocketEvent) -> Void) = { event in
+        let events: ((WebSocketEvent) -> Void) = { [weak self] event in
+            guard let self = self else { return }
             switch event {
             case .connected:
                 self.eventOnOpen()
+                /// onSessionConnected() will be called when DDP connection is fully established
+                /// see messageInHandle()
 
             case .disconnected:
+                self.onSessionDisconnected?(self.sessionId)
                 if self.autoReconnect {
-                    self.triggerReconnect()
+                    self.triggerReconnect(callback: self.onSessionConnected)
                 }
 
             case let .text(text):
@@ -274,12 +228,9 @@ internal extension MeteorClient {
                 if let error = error {
                     logger.logError(.socket, "\(String(describing: error.localizedDescription))")
                 }
-//                if self.autoReconnect && !self.isConnected && !self.tryingToReconnect {
-//                    self.tryingToReconnect = true
-//                    self.triggerReconnect() { sessionId in
-//                        self.tryingToReconnect = false
-//                    }
-//                }
+                if self.autoReconnect && !self.tryingToReconnect {
+                    self.triggerReconnect()
+                }
             }
             self.delegate?.didReceive(name: .websocket, event: event)
         }
@@ -289,45 +240,20 @@ internal extension MeteorClient {
     /// Handle response in queue
     /// - Parameter text: Incomming message
     func handleResponse(_ text: String) {
-        backgroundQueue.addOperation {
+//        log("handleResponse: \(text.prefix(100))")
+        queues.background.addOperation {
             self.messageInHandle(text)
         }
     }
 
     /// DDP connection open event
     fileprivate func eventOnOpen() {
-        heartbeat.addOperation {
-            self.backOff.reset()
-
+        queues.heartbeat.addOperation {
             var messages: [MessageOut] = [.msg(.connect), .version(self.version), .support(self.support)]
             if let sessionId = self.sessionId {
                 messages.append(.session(sessionId))
             }
-
             self.sendMessage(msgs: messages)
-        }
-    }
-
-    /// DDP loginServiceConfiguration
-    func loginServiceSubscription() {
-        let loginServiceConfig = "meteor.loginServiceConfiguration"
-
-        if subRequests[loginServiceConfig] != nil {
-            subscribe(loginServiceConfig, params: nil)
-        }
-
-        if !loginWithToken({ _, error in
-            logger.log(.login, "Meteor login callback error \(String(describing: error?.reason))", .info)
-
-            guard error != nil else {
-                logger.log(.login, "Meteor auto resumed previous login session", .info)
-                return
-            }
-            logger.log(.login, "Meteor loginWithToken failed", .info)
-            self.logout()
-        }) {
-            logger.log(.login, "Meteor login error", .info)
-            logout()
         }
     }
 
@@ -336,7 +262,7 @@ internal extension MeteorClient {
     func restoreSubscriptions() {
         if !autoSubReconnect { return }
         subRequests.forEach { name, req in
-            logger.log(.login, "auto sub reconnect", .debug)
+            logger.log(.login, "auto sub reconnect \(name)", .debug)
             sub(req.id, name: name, params: nil, collectionName: nil, callback: nil, completion: nil)
         }
     }

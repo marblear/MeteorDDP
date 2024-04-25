@@ -29,11 +29,13 @@
  
 */
 
+import Foundation
 
-// MARK:- 🚀 Meteor Accounts - API for handling user login and registration
-// More - https://docs.meteor.com/api/accounts.html
+// MARK: - 🚀 Meteor Accounts - API for handling user login and registration
+
+/// More - https://docs.meteor.com/api/accounts.html
+
 public extension MeteorClient {
-    
     /// Logs a user into the server using an email/username and password
     /// - Parameters:
     ///   - id: An email or username string
@@ -42,12 +44,11 @@ public extension MeteorClient {
     func login(_ id: String, password: String, callback: MeteorMethodCallback?) {
         if id.isValidEmail {
             loginWithPassword(id, password: password, callback: callback)
-        }
-        else {
+        } else {
             loginWithUsername(id, password: password, callback: callback)
         }
     }
-    
+
     /// Invokes a Meteor method to create a user account with a given username, email and password, and a NSDictionary containing a user profile
     /// - Parameters:
     ///   - email: email address string (Must be valid email )
@@ -56,26 +57,26 @@ public extension MeteorClient {
     ///   - profile: Profile dictionary
     ///   - callback: callback
     func signup(_ email: String?, username: String?, password: String, profile: MeteorKeyValue?, callback: MeteorMethodCallback?) {
-        var id: UserMessage?
+        var msg: [UserMessage] = []
+
         if let email = email, email.isValidEmail {
-            id = .emailSignup(email)
+            msg.append(.emailSignup(email))
         }
         if let username = username {
-            id = .usernameSignup(username)
+            msg.append(.usernameSignup(username))
         }
-        
-        if let id = id {
-            var msg: [UserMessage] = [id, .password(password)]
+
+        if msg.count > 0 {
+            msg.append(.password(password))
             if let profile = profile {
                 msg.append(.profile(profile))
             }
             loginUser(params: makeMessage(msg), method: .createUser, callback: callback)
-        }
-        else {
+        } else {
             logger.logError(.signup, "Email and Username both shouldn't empty")
         }
     }
-    
+
     /// Logs a user into the server using an email and password
     /// - Parameters:
     ///   - email: An email string
@@ -86,7 +87,7 @@ public extension MeteorClient {
         let msg: [UserMessage] = [.emailLogin(email), .password(password)]
         loginUser(params: makeMessage(msg), method: .login, callback: callback)
     }
-    
+
     /// Logs a user into the server using a username and password
     /// - Parameters:
     ///   - username: A username string
@@ -97,29 +98,31 @@ public extension MeteorClient {
         let msg: [UserMessage] = [.usernameLogin(username), .password(password)]
         loginUser(params: makeMessage(msg), method: .login, callback: callback)
     }
-    
+
     /// Logs a user out and removes their account data from NSUserDefaults. When it completes, it posts a notification: DDP_USER_DID_LOGOUT on the main queue
     /// - Parameter callback: A closure with result and error parameters describing the outcome of the operation
     func logout(_ callback: MeteorMethodCallback? = nil) {
-        call(Method.logout.rawValue, params: nil) { result, error in
+        call(Method.logout.rawValue, params: nil) { [weak self] result, error in
+            let strongSelf = self
             if let error = error {
                 error.log()
             } else {
-                self.userMainQueue.addOperation() {
-                    self.resetUserData()
+                strongSelf?.queues.userMain.addOperation {
+                    // TODO: Handle this more intelligently
+                    strongSelf?.completeLogout()
                 }
             }
-            self.broadcastEvent(MeteorEvents.logout.rawValue, event: .logout, value: error as Any)
+            strongSelf?.broadcastEvent(MeteorEvents.logout.rawValue, event: .logout, value: error as Any)
             callback?(result, error)
         }
     }
-    
+
     /// Login with oAuth
     /// - Parameters:
     ///   - service: MeteorLoginService
     ///   - clientId: String
     ///   - viewController: UIViewController
-// FIXME 2024-01-11 Disabled OAuth on visionOS because UIViewController is not available
+    // FIXME: 2024-01-11 Disabled OAuth on visionOS because UIViewController is not available
 //     func login<T: UIViewController>(with service: MeteorLoginService, clientId: String, viewController: T) {
 //         if !loginWithToken(nil) {
 //             let oauthDialog = MeteorOAuthViewController()
@@ -132,34 +135,52 @@ public extension MeteorClient {
 //         }
 //     }
 
+    func forgotPassword(_ email: String, callback: MeteorMethodCallback? = nil) {
+        let dictionary: [String: Any] = ["email": email]
+        let params = [dictionary]
+        call(Method.forgotPassword.rawValue, params: params) { [weak self] result, error in
+            if let error = error { error.log() }
+            self?.broadcastEvent(MeteorEvents.forgotPassword.rawValue, event: .forgotPassword, value: error as Any)
+            callback?(result, error)
+        }
+    }
 }
 
+// MARK: Internal login methods
 
-// MARK:- 🚀 Meteor Client -
 internal extension MeteorClient {
-    
+    /// subscribe to loginServiceConfiguration
+    /// contains information about available external login services
+    /// e.g. Facebook, Google, Apple
+    func setupLoginServiceSubscription() {
+        let loginServiceConfig = "meteor.loginServiceConfiguration"
+
+        if subRequests[loginServiceConfig] != nil {
+            subscribe(loginServiceConfig, params: nil)
+        }
+    }
+
     /// Login User with params
     /// - Parameters:
     ///   - params: MeteorKeyValue
     ///   - method: login, logout or register
     ///   - callback: callback
-    func loginUser(params: MeteorKeyValue, method: Method, callback: MeteorMethodCallback?) {        
+    func loginUser(params: MeteorKeyValue, method: Method, callback: MeteorMethodCallback?) {
         call(method.rawValue, params: [params]) { result, error in
-            self.saveLoggedInUser(result, error: error)
-            self.userMainQueue.addOperation() {
+            self.onLoginResult(result, error: error)
+            self.queues.userMain.addOperation {
                 callback?(result, error)
             }
-            
         }
     }
-    
+
     /// Attempts to login a user with a token, if one exists
     /// - Parameter callback: A closure with result and error parameters describing the outcome of the operation
     @discardableResult
-    func loginWithToken(_ callback: MeteorMethodCallback?) -> Bool {
-        if let user = self.getPersistedUser {
-            self.loggedInUser = user
-            if (user.tokenExpires.compare(Date()) == ComparisonResult.orderedDescending) {
+    func loginWithToken(callback: MeteorMethodCallback?) -> Bool {
+        if let user = getPersistedUser() {
+            ownUser = user
+            if user.tokenExpires.compare(Date()) == ComparisonResult.orderedDescending {
                 let params = ["resume": user.token]
                 loginUser(params: params, method: .login, callback: callback)
                 return true
@@ -167,34 +188,48 @@ internal extension MeteorClient {
         }
         return false
     }
-    
+
+    func tryAutoLogin() {
+        let autoLoginAttemptPossible =
+            loginWithToken(callback: onLoginResult)
+        if !autoLoginAttemptPossible {
+            /// auto login not possible, either because
+            /// - there is no existing persistant user with a token
+            /// - an existing token hnas expired
+            log("MeteorClient.tryAutoLogin: auto-login not possible")
+            completeLogout()
+        }
+    }
+
     /// Persist loggedIn User
     /// - Parameters:
     ///   - result: Response
     ///   - error: Error
-    func saveLoggedInUser(_ result: Any?, error: MeteorError?) {
-        
-        if  let data = result as? MeteorKeyValue,
-            let id = data["id"] as? String,
-            let token = data["token"] as? String,
-            let tokenExpires = data["tokenExpires"] as? MeteorKeyValue {
-            
-            self.loggedInUser = UserHolder(id: id, token: token, tokenExpires: tokenExpires.dateFromTimestamp)
-            self.persistUser(object: self.loggedInUser!)
-            self.broadcastEvent(MeteorEvents.login.rawValue, event: .login, value: id)
-            
-        }
-        else if let error = error {
-            self.resetUserData()
+    func onLoginResult(_ result: Any?, error: MeteorError?) {
+        if let data = result as? MeteorKeyValue,
+           let id = data["id"] as? String,
+           let token = data["token"] as? String,
+           let tokenExpires = data["tokenExpires"] as? MeteorKeyValue {
+            ownUser = MeteorOwnUser(id: id, token: token, tokenExpires: tokenExpires.dateFromTimestamp)
+            persistUser(ownUser!)
+            isLoggedIn = true
+            broadcastEvent(MeteorEvents.login.rawValue, event: .login, value: id)
+        } else if let error = error {
+            completeLogout()
             error.log()
         }
-
     }
-    
+
+    func completeLogout() {
+        isLoggedIn = false
+        resetUserData()
+    }
+
     /// Reset LoggedIn User Data
     func resetUserData() {
-        self.loggedInUser = nil
+        ownUser = nil
         UserDefaults.standard.removeObject(forKey: METEOR_DDP)
-        UserDefaults.standard.synchronize()
+        /// Synchronize is deprecated
+        // UserDefaults.standard.synchronize()
     }
 }

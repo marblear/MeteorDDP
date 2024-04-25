@@ -29,6 +29,8 @@
  
 */
 
+import Foundation
+
 // MARK:- 🚀 Meteor Client - Enums to handle DDP operations
 public extension MeteorClient {
     /// Operations against collection
@@ -43,11 +45,11 @@ internal extension MeteorClient {
     
     /// Default DDP methods
     enum Method: String {
-        case createUser, login, logout
+        case createUser, login, logout, forgotPassword
     }
     
     /// Current User object
-    struct UserHolder: Codable {
+    struct MeteorOwnUser: Codable {
         var id, token: String
         var tokenExpires: Date
     }
@@ -62,7 +64,7 @@ internal extension MeteorClient {
     
     /// Object to persist request messages against id
     struct SubRequest {
-        let id: String
+        var id: String
         let messages: [MessageOut]
     }
     

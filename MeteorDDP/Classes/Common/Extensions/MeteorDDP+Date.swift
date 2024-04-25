@@ -29,6 +29,8 @@
  
 */
 
+import Foundation
+
 // MARK:- 🚀 MeteorDDP - Date internal extension
 internal extension Date {
     

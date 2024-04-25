@@ -6,19 +6,19 @@
 //  Copyright (c) 2020 engrahsanali. All rights reserved.
 //
 /*
-
+ 
  Copyright (c) 2020 Muhammad Ahsan Ali, AA-Creations
-
+ 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
-
+ 
  The above copyright notice and this permission notice shall be included in all
  copies or substantial portions of the Software.
-
+ 
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,12 +26,14 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
-
+ 
  */
 
 // MARK: - 🚀 MeteorCollection - provides basic persistence as well as an api for integrating MeteorDDP with persistence stores.
 
-open class MeteorCollections {
+import Foundation
+
+open class MeteorCollection {
     internal var _documents = [String: MeteorKeyValue]()
 
     internal let client: MeteorClient
@@ -41,7 +43,11 @@ open class MeteorCollections {
 
     open var updateDelay: TimeInterval = 0.33
 
-    open var collectionDidChange: ((MeteorCollections, String) -> Void)?
+    open var collectionDidChange: ((MeteorCollection, String) -> Void)?
+    public typealias MeteorDocumentChangeHandler = (MeteorKeyValue) -> Void
+    open var documentAdded: [MeteorDocumentChangeHandler] = []
+    open var documentChanged: [MeteorDocumentChangeHandler] = []
+    open var documentRemoved: [(String) -> Void] = []
 
     open var documents: [MeteorKeyValue] {
         return Array(_documents.values)
@@ -64,7 +70,7 @@ open class MeteorCollections {
     /// Bind observers
     func bindEvents() {
         client.addEventObserver(name, event: .dataAdded) {
-            guard let value = $0 as? MeteorDocument else {
+            guard let value = $0 as? MeteorDocumentChange else {
                 return
             }
             if let c = self.client.collections[self.name] {
@@ -73,7 +79,7 @@ open class MeteorCollections {
         }
 
         client.addEventObserver(name, event: .dataChange) {
-            guard let value = $0 as? MeteorDocument else {
+            guard let value = $0 as? MeteorDocumentChange else {
                 return
             }
             if let c = self.client.collections[self.name] {
@@ -82,13 +88,25 @@ open class MeteorCollections {
         }
 
         client.addEventObserver(name, event: .dataRemove) {
-            guard let value = $0 as? MeteorDocument else {
+            guard let value = $0 as? MeteorDocumentChange else {
                 return
             }
             if let c = self.client.collections[self.name] {
                 c.localRemove(value.id)
             }
         }
+    }
+
+    func onDocumentAdded(_ callback: @escaping MeteorDocumentChangeHandler) {
+        documentAdded.append(callback)
+    }
+
+    func onDocumentChanged(_ callback: @escaping MeteorDocumentChangeHandler) {
+        documentChanged.append(callback)
+    }
+
+    func onDocumentRemoved(_ callback: @escaping (String) -> Void) {
+        documentRemoved.append(callback)
     }
 
     /// deinit
@@ -107,16 +125,19 @@ open class MeteorCollections {
 
 // MARK: - 🚀 MeteorCollection -
 
-public extension MeteorCollections {
+public extension MeteorCollection {
     /// Inserts local document
     /// - Parameters:
     ///   - id: ID of the document
     ///   - fields: new fields
     func localInsert(_ id: String, fields: MeteorKeyValue) {
-        var fields = fields
-        fields["_id"] = id
-        _documents[id] = fields
+        var document = fields
+        document["_id"] = id
+        _documents[id] = document
         broadcastChange(id)
+        documentAdded.forEach { handler in
+            handler(document)
+        }
     }
 
     /// Updates local document
@@ -132,12 +153,15 @@ public extension MeteorCollections {
             }
             _documents[id] = document
             broadcastChange(id)
+            documentChanged.forEach { handler in
+                handler(document)
+            }
         }
     }
-    
-    private func mergeDictionaries(original: inout MeteorKeyValue, updated: [String: Any], deep: Bool = false) {
+
+    private func mergeDictionaries(original: inout MeteorKeyValue, updated: MeteorKeyValue, deep: Bool = false) {
         for (key, value) in updated {
-            if deep == true, var originalSubDict = original[key] as? [String: Any], let updatedSubDict = value as? [String: Any] {
+            if deep == true, var originalSubDict = original[key] as? MeteorKeyValue, let updatedSubDict = value as? MeteorKeyValue {
                 mergeDictionaries(original: &originalSubDict, updated: updatedSubDict)
                 original[key] = originalSubDict
             } else {
@@ -152,6 +176,9 @@ public extension MeteorCollections {
         if let _ = _documents[id] {
             _documents[id] = nil
             broadcastChange(id)
+            documentRemoved.forEach { handler in
+                handler(id)
+            }
         }
     }
 
@@ -241,7 +268,7 @@ public extension MeteorCollections {
 
 // MARK: - 🚀 MeteorCollection -
 
-fileprivate extension MeteorCollections {
+fileprivate extension MeteorCollection {
     /// Broadcast dataset change
     func broadcastChange(_ id: String) {
         guard let didChange = collectionDidChange else {

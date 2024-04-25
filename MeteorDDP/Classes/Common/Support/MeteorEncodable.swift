@@ -29,6 +29,8 @@
  
 */
 
+import Foundation
+
 // MARK:- 🚀 MeteorEncodable - provide support to convert MeteorKeyValue to Encodable format
 open class MeteorEncodable {
         

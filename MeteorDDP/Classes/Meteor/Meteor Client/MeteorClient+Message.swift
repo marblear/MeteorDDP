@@ -29,18 +29,20 @@
  
 */
 
+import Foundation
+
 // MARK:- 🚀 MeteorClient+Message - interacting with basic Meteor server-side services
 internal extension MeteorClient {
     
     func ping() {
-        heartbeat.addOperation() {
+        queues.heartbeat.addOperation() {
             self.sendMessage(msgs: [.msg(.ping), .id(String.randomString)])
         }
       }
       
     // Respond to a server ping
     func pong(_ id: String?) {
-        heartbeat.addOperation() {
+        queues.heartbeat.addOperation() {
             self.server.ping = Date()
             var msg: [MessageOut] = [.msg(.pong)]
             if let id = id {
@@ -68,12 +70,16 @@ internal extension MeteorClient {
                     
                 case .connected:
                     self.sessionId = message.session
+                    /// call the callback provided to the connect() method
                     self.onSessionConnected?(sessionId!)
-                    self.loginServiceSubscription()
+                    self.setupLoginServiceSubscription()
+                    self.tryAutoLogin()
                     
                     if firstConnect {
                         firstConnect = false
                     } else {
+                        /// In the original implementation, restoring existing subscription was done in MeteorClient.loginServiceSubscription().
+                        /// However, Meteor web client also restores subscriptions *before* auto-login has fully completed
                         self.restoreSubscriptions()
                     }
                     
@@ -81,13 +87,13 @@ internal extension MeteorClient {
                     message.log(.info)
                     
                 case .ping:
-                    heartbeat.addOperation() {
+                    queues.heartbeat.addOperation() {
                         self.pong(message.id)
                     }
                     message.log(.info)
                     
                 case .pong:
-                    heartbeat.addOperation() {
+                    queues.heartbeat.addOperation() {
                         self.server.pong = Date()
                     }
                     message.log(.info)
@@ -96,7 +102,7 @@ internal extension MeteorClient {
                     guard let subs = message.subs else {
                         return
                     }
-                    documentQueue.addOperation() {
+                    queues.documentMessages.addOperation() {
                         self.ready(subs)
                     }
                     message.log(.info)
@@ -105,7 +111,7 @@ internal extension MeteorClient {
                     guard let id = message.id else {
                         return
                     }
-                    documentQueue.addOperation() {
+                    queues.documentMessages.addOperation() {
                         self.nosub(id, error: message.error)
                     }
                     message.log(.info)
@@ -137,21 +143,21 @@ fileprivate extension MeteorClient {
             let id = message.id {
             
             var event: MeteorCollectionEvents
-            var result: MeteorDocument
+            var result: MeteorDocumentChange
             
             switch type {
                 
             case .added:
                 event = .dataAdded
-                result = MeteorDocument(name: collection, id: id, fields: message.fields, cleared: nil)
+                result = MeteorDocumentChange(name: collection, id: id, fields: message.fields, cleared: nil)
                 
             case .changed:
                 event = .dataChange
-                result = MeteorDocument(name: collection, id: id, fields: message.fields, cleared: message.cleared)
+                result = MeteorDocumentChange(name: collection, id: id, fields: message.fields, cleared: message.cleared)
                 
             case .removed:
                 event = .dataRemove
-                result = MeteorDocument(name: collection, id: id, fields: nil, cleared: nil)
+                result = MeteorDocumentChange(name: collection, id: id, fields: nil, cleared: nil)
             }
             
             broadcastEvent(collection, event: event.meteorEvent, value: result)
@@ -165,7 +171,7 @@ fileprivate extension MeteorClient {
     ///   - message: Response
     ///   - type: Method
     func handleMethod(_ message: MessageIn, type: MessageIn.MessageInMethod) {
-        methodResultQueue.addOperation() {
+        queues.methodResult.addOperation() {
             DispatchQueue.main.async {
                 
                 guard let id = message.id, let method = self.methodHandler?[id] else { return }
@@ -196,7 +202,7 @@ fileprivate extension MeteorClient {
     ///   - collection: collection Name
     ///   - event: Meteor event
     ///   - result: Meteor document
-    func invokeCallback(byCollection collection: String, _ event: MeteorCollectionEvents, _ result: MeteorDocument) {
+    func invokeCallback(byCollection collection: String, _ event: MeteorCollectionEvents, _ result: MeteorDocumentChange) {
         DispatchQueue.main.async {
             self.findSubscription(byCollection: collection)?.callback?(event, result)
         }

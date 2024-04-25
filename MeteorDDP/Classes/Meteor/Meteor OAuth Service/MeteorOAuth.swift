@@ -29,6 +29,8 @@
  
 */
 
+import Foundation
+
 // MARK:- 🚀 MeteorLoginService - provide login through thrid-party services
 public enum MeteorLoginService: String {
     case twitter, github, google, facebook

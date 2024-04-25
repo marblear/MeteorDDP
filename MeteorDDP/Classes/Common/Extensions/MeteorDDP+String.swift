@@ -29,6 +29,7 @@
  
 */
 
+import Foundation
 
 // MARK:- 🚀 MeteorDDP - String internal extension
 internal extension String {

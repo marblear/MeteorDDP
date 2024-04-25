@@ -30,6 +30,8 @@
 
 // MARK: - 🚀 Meteor Events - Enums to handle all events
 
+import Foundation
+
 public enum MeteorEvents: String {
     case method, websocket
     case dataAdded, dataChange, dataRemove
@@ -37,6 +39,7 @@ public enum MeteorEvents: String {
     case reconnection = "DDP_Reconnection"
     case login = "DDP_Login"
     case logout = "DDP_Logout"
+    case forgotPassword = "DDP_ForgotPassword"
 }
 
 public enum MeteorCollectionEvents: String {
@@ -72,7 +75,7 @@ public class MeteorResponse {
 
 // MARK: - MeteorDocument
 
-public final class MeteorDocument: MeteorResponse {
+public final class MeteorDocumentChange: MeteorResponse {
     public let id: String, fields: MeteorKeyValue?, cleared: [String]?
 
     init(name: String, id: String, fields: MeteorKeyValue?, cleared: [String]?) {

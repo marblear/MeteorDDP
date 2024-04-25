@@ -29,9 +29,9 @@
  
 */
 
-// MARK:- 🚀 MeteorClient+Method - interacting with basic Meteor server-side services
+// MARK: - 🚀 MeteorClient+Method - interacting with basic Meteor server-side services
+
 public extension MeteorClient {
-    
     /// Executes a method on the server. If a callback is passed, the callback is asynchronously executed when the method has completed. The callback takes two arguments: result and error. It the method call is successful, result contains the return value of the method, if any. If the method fails, error contains information about the error.
     /// - Parameters:
     ///   - name: The name of the method
@@ -46,13 +46,12 @@ public extension MeteorClient {
             messages.append(.params(p))
         }
         if let callback = callback {
-            self.methodHandler?[id] = MethodHolder(name: name, completion: callback)
+            methodHandler?[id] = MethodHolder(name: name, completion: callback)
         }
-        
-        userBackground.addOperation() {
+
+        queues.userBackground.addOperation {
             self.sendMessage(msgs: messages)
         }
         return id
     }
-
 }

@@ -29,6 +29,8 @@
  
 */
 
+import Foundation
+
 // MARK:- 🚀 MeteorDDP global declaration
 
 internal let METEOR_DDP = "MeteorDDP"
@@ -47,7 +49,7 @@ public typealias MeteorCompletionBool = (Bool) -> ()
 
 public typealias MeteorMethodCallback = (Any?, MeteorError?) -> ()
 
-public typealias MeteorCollectionCallback = (MeteorCollectionEvents, MeteorDocument) -> ()
+public typealias MeteorCollectionCallback = (MeteorCollectionEvents, MeteorDocumentChange) -> ()
 
 // MARK:- 🚀 MeteorDelegate
 
@@ -55,4 +57,13 @@ public protocol MeteorDelegate: AnyObject {
     func didReceive(name : MeteorEvents, event: Any)
 }
 
-
+extension MeteorKeyValue {
+    func convert<T: EJSONCodable>(asType: T.Type) -> T? {
+        do {
+            let codable = try EJSONDecoder().decode(type: asType, from: self)
+            return codable
+        } catch {
+            return nil
+        }
+    }
+}

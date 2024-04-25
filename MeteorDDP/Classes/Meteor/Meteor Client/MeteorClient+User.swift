@@ -29,34 +29,33 @@
  
 */
 
-// MARK:- 🚀 MeteorClient+Accounts -
+import Foundation
+
+// MARK: - 🚀 MeteorClient+Accounts -
+
 internal extension MeteorClient {
-    
     /// Persisit User
     /// - Parameter object: LoggedIn User Object
-    func persistUser(object: UserHolder) {
-        if let data = try? MeteorEncodable.encode(object) {
-            UserDefaults.standard.set(data, forKey: METEOR_DDP)
-            UserDefaults.standard.synchronize()
-        }
-    }
-    
-    /// Persisted User
-    var getPersistedUser: UserHolder? {
-        if let data = UserDefaults.standard.value(forKey: METEOR_DDP) {
-            return MeteorEncodable.decode(UserHolder.self, from: data)
-        }
-        return nil
+    func persistUser(_ user: MeteorOwnUser) {
+        guard let data = try? MeteorEncodable.encode(user) else { return }
+        UserDefaults.standard.set(data, forKey: METEOR_DDP)
+        UserDefaults.standard.synchronize()
     }
 
+    /// Persisted User
+    func getPersistedUser() -> MeteorOwnUser? {
+        guard let data = UserDefaults.standard.value(forKey: METEOR_DDP) else { return nil }
+        let ownUser = MeteorEncodable.decode(MeteorOwnUser.self, from: data)
+        return ownUser
+    }
 }
 
-// MARK:- 🚀 Meteor Client -
-public extension MeteorClient {
+// MARK: - 🚀 Meteor Client -
 
+public extension MeteorClient {
     /// Check for current loggedIn user
-    var isLoggedIn: Bool { getPersistedUser != nil }
-    
+    var hasPersistedUser: Bool { getPersistedUser() != nil }
+
     /// Returns the client userId, if it exists
-    var userId: String? { loggedInUser?.id }
+    var userId: String? { ownUser?.id }
 }
