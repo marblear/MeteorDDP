@@ -29,6 +29,7 @@
 
  */
 
+import Foundation
 import Starscream
 import SystemConfiguration
 

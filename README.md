@@ -14,6 +14,8 @@ High-level overview of the modifications:
 * Support merging documents by adding, updating or removing values, based on DDP messages
 * Support for Sign in with Apple (server-side uses forks of [quave:accounts-apple](https://github.com/marblear/accounts-apple) and [quave:apple-oauth](https://github.com/marblear/apple-oauth))
 * Support for Forgot Password
+* Support for Swift Package Manager (SPM)
+* Added Privacy Info Manifest
 
 Your Podfile also has to reference these additional packages for visionOS support:
 * pod 'Starscream', :git => 'https://github.com/marblear/Starscream.git', :commit => '4b3e3a7b848b02c0b585da252afb0cb626a6d20a'
