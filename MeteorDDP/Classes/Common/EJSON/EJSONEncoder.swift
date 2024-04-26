@@ -1,6 +1,5 @@
 //
 //  EJSONEncoder.swift
-//  Marbleverse
 //
 //  Created by Tom Brückner on 2024-01-25.
 //

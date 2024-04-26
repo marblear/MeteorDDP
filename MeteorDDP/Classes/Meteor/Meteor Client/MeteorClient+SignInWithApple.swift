@@ -1,6 +1,5 @@
 //
 //  MeteorClient+SignInWithApple.swift
-//  Marbleverse
 //
 //  Created by Tom Brückner on 2024-03-03.
 //
