@@ -7,12 +7,12 @@ High-level overview of the modifications:
 * Improved support for Apple's standard WebSocketTask
 * Subs use a sub name instead of assuming a Mongo collection with the same name
 * Corrected sub behavior to prevent documents from being transferred again if the sub parameters change
-* Improved message handling to ensure messages come are processed in order
+* Improved message handling to ensure incoming messages are processed in order
 * EJSON support for easier conversion between model structs and Mongo documents, including date handling
 * Added CodableValue and DynamicDictionary to simplify access to blackbox properties in documents
 * Enhanced local collection handling
 * Support merging documents by adding, updating or removing values, based on DDP messages
-* Support for Sign in with Apple (the server-side uses our forks of [quave:accounts-apple](https://github.com/marblear/accounts-apple) and [quave:apple-oauth](https://github.com/marblear/apple-oauth))
+* Support for Sign in with Apple (server-side use  forks of [quave:accounts-apple](https://github.com/marblear/accounts-apple) and [quave:apple-oauth](https://github.com/marblear/apple-oauth))
 * Support for Forgot Password
 
 # Original Readme
