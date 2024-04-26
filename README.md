@@ -12,7 +12,7 @@ High-level overview of the modifications:
 * Added CodableValue and DynamicDictionary to simplify access to blackbox properties in documents
 * Enhanced local collection handling
 * Support merging documents by adding, updating or removing values, based on DDP messages
-* Support for Sign in with Apple (server-side use  forks of [quave:accounts-apple](https://github.com/marblear/accounts-apple) and [quave:apple-oauth](https://github.com/marblear/apple-oauth))
+* Support for Sign in with Apple (server-side uses forks of [quave:accounts-apple](https://github.com/marblear/accounts-apple) and [quave:apple-oauth](https://github.com/marblear/apple-oauth))
 * Support for Forgot Password
 
 # Original Readme
