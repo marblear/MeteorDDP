@@ -21,6 +21,8 @@ Your Podfile also has to reference these additional packages for visionOS suppor
 * pod 'Starscream', :git => 'https://github.com/marblear/Starscream.git', :commit => '4b3e3a7b848b02c0b585da252afb0cb626a6d20a'
 * pod 'CryptoSwift', :git => 'https://github.com/marblear/CryptoSwift.git', :commit => 'de89060f4b5c3d99f5af317bfdb6f36925a9444a'
 
+For Swift Package Manager, these libraries have already been set as a dependency.
+
 # Original Readme
 
 ![MeteorDDP](https://raw.githubusercontent.com/EngrAhsanAli/MeteorDDP/master/MeteorDDP.png)
