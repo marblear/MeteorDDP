@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
   name: "MeteorDDP",
   platforms: [
-    .iOS(.v12), .visionOS(.v1)
+    .iOS(.v13), .visionOS(.v1)
   ],
   products: [
     .library(
