@@ -45,15 +45,15 @@ public class MeteorClient {
     /// web sockets
     var socket: MeteorWebSockets
     /// subscription handler for subscription ids
-    var subHandlers = [String: SubHolder]()
+    var subHandlers = ThreadSafeDictionary<String, SubHolder>()
     /// subscription holder for collection names
-    var subCollections = [String: SubHolder]()
+    var subCollections = ThreadSafeDictionary<String, SubHolder>()
     /// mongo collection observers
     var observers = [String: NSObjectProtocol]()
     // subscription requests against names
-    var subRequests = [String: SubRequest]()
+    var subRequests = ThreadSafeDictionary<String, SubRequest>()
     /// methods handler
-    var methodHandler: [String: MethodHolder]?
+    var methodHandler: ThreadSafeDictionary<String, MethodHolder>?
     /// own user, as saved and retrieved from UserDefaults
     public var ownUser: MeteorOwnUser?
     /// is user logged in
@@ -61,7 +61,7 @@ public class MeteorClient {
     /// ddp ping pong
     var server: (ping: Date?, pong: Date?) = (nil, nil)
     /// collections handler with name
-    var collections = [String: MeteorCollection]()
+    var collections = ThreadSafeDictionary<String, MeteorCollection>()
     /// session connected callback; will only be called once, when first connection is established
     var onSessionConnected: ((String) -> Void)?
     /// session disconnected callback
@@ -141,7 +141,7 @@ public class MeteorClient {
     /// Connects the ddp server and bind websocket events with the provided websocket interfacxe
     /// - Parameter callback: ddp session
     public func connect(callback: ((String) -> Void)?) {
-        methodHandler = [:]
+        methodHandler = .init()
         onSessionConnected = callback
         bindEvent()
         socket.configureWebSocket()
