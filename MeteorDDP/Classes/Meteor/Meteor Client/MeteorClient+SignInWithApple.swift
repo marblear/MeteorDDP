@@ -11,7 +11,7 @@ import Foundation
 /// https://medium.com/@jeremysh/signinwithapplebutton-swiftui-authentication-2d9d3146cb2d
 
 public extension MeteorClient {
-    func signInWithApple(_ authResults: ASAuthorization, callback: MeteorMethodCallback?) {
+    func signInWithApple(_ authResults: ASAuthorization, client: String? = nil, callback: MeteorMethodCallback? = nil) {
         guard let credentials = authResults.credential as? ASAuthorizationAppleIDCredential,
               let authCode = credentials.authorizationCode,
               let authToken = String(data: authCode, encoding: .utf8),
@@ -49,6 +49,10 @@ public extension MeteorClient {
         var parameters: [String: Any] = [:]
         parameters["serviceData"] = serviceData
         parameters["options"] = options
+        
+        if client != nil {
+            parameters["client"] = client
+        }
 
         //        let body = ["appleIdentityToken": idToken]
         //        guard let jsonData = try? JSONEncoder().encode(body) else { return }
