@@ -182,8 +182,8 @@ internal extension MeteorClient {
     ///   - callback: callback
     func loginUser(params: MeteorKeyValue, method: Method, callback: MeteorMethodCallback?) {
         call(method.rawValue, params: [params]) { result, error in
-            self.onLoginResult(result, error: error)
             self.queues.userMain.addOperation {
+                self.onLoginResult(result, error: error)
                 callback?(result, error)
             }
         }

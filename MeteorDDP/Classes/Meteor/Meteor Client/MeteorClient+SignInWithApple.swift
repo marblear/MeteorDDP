@@ -49,7 +49,7 @@ public extension MeteorClient {
         var parameters: [String: Any] = [:]
         parameters["serviceData"] = serviceData
         parameters["options"] = options
-        
+
         if client != nil {
             parameters["client"] = client
         }
@@ -64,12 +64,16 @@ public extension MeteorClient {
                     result["firstName"] = firstName
                     result["lastName"] = lastName
                 }
-                self.onLoginResult(result, error: error)
-                self.queues.userMain.addOperation { callback?(result, error) }
+                self.queues.userMain.addOperation {
+                    self.onLoginResult(result, error: error)
+                    callback?(result, error)
+                }
                 return
             }
-            self.onLoginResult(nil, error: error)
-            self.queues.userMain.addOperation { callback?(nil, error) }
+            self.queues.userMain.addOperation {
+                self.onLoginResult(nil, error: error)
+                callback?(nil, error)
+            }
         }
     }
 }
